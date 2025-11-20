@@ -6,3 +6,4 @@
 *.docx
 *.xlsx
 *.pdf
+!data/bumbledata.xlsx
