@@ -1,0 +1,37 @@
+---
+title: "First ANOVA Test comparing (numerical vs catagorical)"
+format: html
+
+---
+
+```{r}
+
+
+LM01 <- lm(`Pollinating visits by B. terrestris (visits/flower/10 min)`~Population,
+           data = bumbledata)
+summary(LM01)
+
+anova(LM01)
+
+library(agricolae)
+hsd <- agricolae::HSD.test(LM01, "Population")
+hsd$groups
+
+#Difference between populations exists. Specifically 
+
+AOV01 <- aov(`Pollinating visits by B. terrestris (visits/flower/10 min)`~Population,
+           data = bumbledata)
+hsd02 <-TukeyHSD(AOV01, "Population")
+
+t1 <- hsd02$Population
+
+t1 <- as.data.frame(t1)
+tf <- t1$`p adj` < 0.05
+which(tf)
+
+row.names(t1)[tf]
+
+#Compare populations
+
+```
+
