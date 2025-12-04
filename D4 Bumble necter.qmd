@@ -1,0 +1,123 @@
+---
+title: "D4 BUMBLE NECTER"
+author: "VIKAS, SINA, GULLIUM, ROLF"
+format: html
+---
+
+## Setup: load packages, set options, create results folder
+
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(readxl, dplyr, ggplot2, tidyr, MASS, glmmTMB, DHARMa, emmeans, vegan, knitr)
+
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.path = "results/", dev = "png", dpi = 120)
+if (!dir.exists("results")) dir.create("results")
+```{r}
+# Load data
+
+df <- readxl::read_excel("data/Raw_data.xlsx", sheet = 1)
+
+cat("rows:", nrow(df), "cols:", ncol(df), "\n")
+cat("Column names:\n")
+print(names(df))
+
+# Replace literal "nr" with NA (if present)
+
+df[df == "nr"] <- NA
+
+# Ensure Population exists and is factor
+
+if ("Population" %in% names(df)) df$Population <- as.factor(df$Population)
+
+# Explicit numeric columns (only those that exist will be converted)
+
+numeric_cols <- c(
+"Pollinating visits by S. sephaniodes (visits/flower/10 min)",
+"Pollinating visits by B. dahlbomii (visits/flower/10 min)",
+"Pollinating visits by B. terrestris (visits/flower/10 min)",
+"Pollinating visits by A. mellifera (visits/flower/10 min)",
+"Total pollinating visits (visits/flower/10 min)",
+"Robbing visits by S. sephaniodes (visits/flower/10 min)",
+"Robbing visits by B. dahlbomii (visits/flower/10 min)",
+"Robbing visits by B. terrestris (visits/flower/10 min)",
+"Robbing visits by A. mellifera (visits/flower/10 min)",
+"Total robbing visits (visits/flower/10 min)",
+"Pierced flowers (%)",
+"Standing crop of nectar from pierced flower (µl/flower)",
+"Standing crop of nectar from undamaged flower (µl/flower)",
+"Nectar production rate from pierced flower (µl/flower/24 h)",
+"Nectar production rate from undamaged flower (µl/flower/24 h)",
+"Seeds/flower (+P+R)",
+"Seeds/flower (+P-R)",
+"Seeds/flower (-P-R)"
+)
+existing_num_cols <- intersect(names(df), numeric_cols)
+df[existing_num_cols] <- lapply(df[existing_num_cols], function(x) as.numeric(x))
+
+# Quick numeric summary for converted columns
+
+if (length(existing_num_cols) > 0) {
+print(summary(df[existing_num_cols]))
+} else {
+cat("No numeric columns from the expected list were found.\n")
+}
+
+```
+
+```{r}
+# Create derived columns used in analyses
+
+# rob_count (use total robbing visits)
+
+if ("Total robbing visits (visits/flower/10 min)" %in% names(df)) {
+df$rob_count <- df[["Total robbing visits (visits/flower/10 min)"]]
+} else {
+df$rob_count <- NA_real_
+}
+
+# native_visits = total pollinating minus B. terrestris visits
+
+if (
+"Total pollinating visits (visits/flower/10 min)" %in% names(df) &&
+"Pollinating visits by B. terrestris (visits/flower/10 min)" %in% names(df)
+) {
+df$native_visits <-
+df[["Total pollinating visits (visits/flower/10 min)"]] -
+df[["Pollinating visits by B. terrestris (visits/flower/10 min)"]]
+} else {
+df$native_visits <- NA_real_
+}
+
+# robbed flag (any rob_count > 0)
+
+df$robbed_flag <- ifelse(!is.na(df$rob_count) & df$rob_count > 0, "robbed", "unrobbed")
+df$robbed_flag[is.na(df$rob_count)] <- NA
+
+# Preview a few columns (safe selection)
+
+preview_cols <- intersect(c("Population", "Plant", "rob_count", "native_visits", "robbed_flag"), names(df))
+knitr::kable(head(df[, preview_cols], 10), caption = "Preview of derived variables")
+
+```
+
+#Results
+#1 Exploratory plots (native visits by robbed status)
+```{r}
+library(ggplot2)
+
+# Basic boxplot + jitter
+
+p1 <- ggplot(df, aes(x = robbed_flag, y = native_visits)) +
+geom_boxplot(outlier.shape = NA) +
+geom_jitter(width = 0.18, alpha = 0.6, size = 1.8) +
+labs(x = "Robbed status", y = "Native visits (visits/flower/10 min)",
+title = "Native visits by robbed status") +
+theme_minimal(base_size = 12)
+
+print(p1)
+
+# Save explicitly
+
+ggplot2::ggsave(filename = "results/native_visits_by_robbed.png", plot = p1, width = 6, height = 4, dpi = 150)
+
+```
+
