@@ -4,13 +4,17 @@ author: "VIKAS, SINA, GULLIUM, ROLF"
 format: html
 ---
 
-## Setup: load packages, set options, create results folder
 
+```{r}
+# Setup: load packages, set options, create results folder
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 pacman::p_load(readxl, dplyr, ggplot2, tidyr, MASS, glmmTMB, DHARMa, emmeans, vegan, knitr)
 
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.path = "results/", dev = "png", dpi = 120)
 if (!dir.exists("results")) dir.create("results")
+```
+
+
 ```{r}
 # Load data
 
@@ -118,6 +122,52 @@ print(p1)
 # Save explicitly
 
 ggplot2::ggsave(filename = "results/native_visits_by_robbed.png", plot = p1, width = 6, height = 4, dpi = 150)
+
+```
+
+#2 Model: native visits ~ rob_count (Poisson vs NB)
+
+```{r}
+# Ensure response exists
+
+if (!"native_visits" %in% names(df)) {
+stop("native_visits not found. Cannot fit visits model.")
+}
+
+# Drop rows where response is NA
+
+dmod <- df %>% dplyr::filter(!is.na(native_visits))
+
+# Fit Poisson
+
+mod_p <- try(glm(native_visits ~ rob_count + Population, family = poisson(link = "log"), data = dmod), silent = TRUE)
+
+if (inherits(mod_p, "try-error")) {
+cat("Poisson model failed to run. Showing error and stopping here.\n")
+print(mod_p)
+} else {
+
+# compute dispersion correctly
+
+disp <- sum(residuals(mod_p, type = "pearson")^2, na.rm = TRUE) / mod_p$df.residual
+cat("Dispersion (Pearson):", round(disp, 2), "\n")
+
+if (is.na(disp) || disp > 1.5) {
+cat("Overdispersion detected (or dispersion NA). Fitting negative binomial model.\n")
+mod_nb <- try(MASS::glm.nb(native_visits ~ rob_count + Population, data = dmod), silent = TRUE)
+if (!inherits(mod_nb, "try-error")) {
+print(summary(mod_nb))
+saveRDS(mod_nb, file = "results/mod_nb_native_visits.rds")
+} else {
+cat("Negative binomial failed. See message:\n")
+print(mod_nb)
+}
+} else {
+cat("Poisson model acceptable. Summary:\n")
+print(summary(mod_p))
+saveRDS(mod_p, file = "results/mod_poisson_native_visits.rds")
+}
+}
 
 ```
 
