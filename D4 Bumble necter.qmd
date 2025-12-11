@@ -128,46 +128,72 @@ ggplot2::ggsave(filename = "results/native_visits_by_robbed.png", plot = p1, wid
 #2 Model: native visits ~ rob_count (Poisson vs NB)
 
 ```{r}
-# Ensure response exists
+library(MASS)
+mod_p <- glm(native_visits ~ rob_count + Population, family = poisson(link = "log"), data = df)
 
-if (!"native_visits" %in% names(df)) {
-stop("native_visits not found. Cannot fit visits model.")
-}
-
-# Drop rows where response is NA
-
-dmod <- df %>% dplyr::filter(!is.na(native_visits))
-
-# Fit Poisson
-
-mod_p <- try(glm(native_visits ~ rob_count + Population, family = poisson(link = "log"), data = dmod), silent = TRUE)
-
-if (inherits(mod_p, "try-error")) {
-cat("Poisson model failed to run. Showing error and stopping here.\n")
-print(mod_p)
-} else {
-
-# compute dispersion correctly
-
-disp <- sum(residuals(mod_p, type = "pearson")^2, na.rm = TRUE) / mod_p$df.residual
-cat("Dispersion (Pearson):", round(disp, 2), "\n")
+# use df.residual(mod_p) to get model df (NOT df.residual[1])
+disp <- sum(residuals(mod_p, type = "pearson")^2, na.rm = TRUE) / df.residual(mod_p)
+cat("Dispersion:", round(disp, 2), "\n")
 
 if (is.na(disp) || disp > 1.5) {
-cat("Overdispersion detected (or dispersion NA). Fitting negative binomial model.\n")
-mod_nb <- try(MASS::glm.nb(native_visits ~ rob_count + Population, data = dmod), silent = TRUE)
-if (!inherits(mod_nb, "try-error")) {
-print(summary(mod_nb))
-saveRDS(mod_nb, file = "results/mod_nb_native_visits.rds")
+  cat("Overdispersion detected or cannot compute. Fitting negative binomial.\n")
+  mod_nb <- MASS::glm.nb(native_visits ~ rob_count + Population, data = df)
+  print(summary(mod_nb))
+  saveRDS(mod_nb, file = "results/mod_nb_native_visits.rds")
 } else {
-cat("Negative binomial failed. See message:\n")
-print(mod_nb)
-}
-} else {
-cat("Poisson model acceptable. Summary:\n")
-print(summary(mod_p))
-saveRDS(mod_p, file = "results/mod_poisson_native_visits.rds")
-}
+  print(summary(mod_p))
+  saveRDS(mod_p, file = "results/mod_poisson_native_visits.rds")
 }
 
+```
+
+#3 Nectar: pierced vs undamaged (paired)
+```{r}
+# use Standing crop columns if available
+p_col <- "Standing crop of nectar from pierced flower (µl/flower)"
+u_col <- "Standing crop of nectar from undamaged flower (µl/flower)"
+if (all(c(p_col, u_col) %in% names(df))) {
+paired_ok <- complete.cases(df[[p_col]], df[[u_col]])
+cat("Number of paired observations:", sum(paired_ok), "\n")
+if (sum(paired_ok) > 3) {
+dvals <- df[[p_col]][paired_ok] - df[[u_col]][paired_ok]
+sh <- shapiro.test(dvals)
+cat("Shapiro p for differences:", sh$p.value, "\n")
+if (sh$p.value > 0.05) {
+tres <- t.test(df[[p_col]][paired_ok], df[[u_col]][paired_ok], paired = TRUE)
+print(tres)
+} else {
+wres <- wilcox.test(df[[p_col]][paired_ok], df[[u_col]][paired_ok], paired = TRUE)
+print(wres)
+}
+} else {
+cat("Not enough paired observations to run the test.\n")
+}
+} else {
+cat("Paired nectar columns not available.\n")
+}
+
+```
+
+#4Seed set model
+```{r}
+seed_col <- "Seeds/flower (+P+R)"
+if (seed_col %in% names(df)) {
+df$seeds_pr <- df[[seed_col]]
+
+# model seeds ~ rob_count (Poisson or NB)
+
+m_seed_p <- glm(seeds_pr ~ rob_count + Population, family = poisson, data = df)
+disp_s <- sum(residuals(m_seed_p, type = "pearson")^2, na.rm=TRUE) / m_seed_p$df.residual
+cat("Seeds model dispersion:", round(disp_s, 2), "\n")
+if (disp_s > 1.5) {
+mn <- try(MASS::glm.nb(seeds_pr ~ rob_count + Population, data = df), silent = TRUE)
+if (!inherits(mn, "try-error")) print(summary(mn))
+} else {
+print(summary(m_seed_p))
+}
+} else {
+cat("Seeds column not found.\n")
+}
 ```
 
