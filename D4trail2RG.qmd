@@ -1,0 +1,382 @@
+---
+title: "Nectar robbing analysis"
+format: html
+execute:
+  echo: false      # hide all code in output
+  warning: false
+  message: false
+---
+
+```{r}
+
+
+
+############################################################
+# 0) Setup: load packages, set options, create results folder
+############################################################
+
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(readxl, dplyr, ggplot2, tidyr, MASS, glmmTMB, DHARMa, emmeans, vegan, knitr)
+
+# Use dplyr::select to avoid conflicts
+select <- dplyr::select
+
+if (!dir.exists("results")) dir.create("results")
+
+############################################################
+# 1) Load data
+############################################################
+
+df <- readxl::read_excel("data/Raw_data.xlsx", sheet = 1)
+
+# Replace literal "nr" with NA (if present)
+df[df == "nr"] <- NA
+
+# Ensure Population exists and is factor
+if ("Population" %in% names(df)) df$Population <- as.factor(df$Population)
+
+# Explicit numeric columns (only those that exist will be converted)
+numeric_cols <- c(
+  "Pollinating visits by S. sephaniodes (visits/flower/10 min)",
+  "Pollinating visits by B. dahlbomii (visits/flower/10 min)",
+  "Pollinating visits by B. terrestris (visits/flower/10 min)",
+  "Pollinating visits by A. mellifera (visits/flower/10 min)",
+  "Total pollinating visits (visits/flower/10 min)",
+  "Robbing visits by S. sephaniodes (visits/flower/10 min)",
+  "Robbing visits by B. dahlbomii (visits/flower/10 min)",
+  "Robbing visits by B. terrestris (visits/flower/10 min)",
+  "Robbing visits by A. mellifera (visits/flower/10 min)",
+  "Total robbing visits (visits/flower/10 min)",
+  "Pierced flowers (%)",
+  "Standing crop of nectar from pierced flower (µl/flower)",
+  "Standing crop of nectar from undamaged flower (µl/flower)",
+  "Nectar production rate from pierced flower (µl/flower/24 h)",
+  "Nectar production rate from undamaged flower (µl/flower/24 h)",
+  "Seeds/flower (+P+R)",
+  "Seeds/flower (+P-R)",
+  "Seeds/flower (-P-R)"
+)
+
+existing_num_cols <- intersect(names(df), numeric_cols)
+df[existing_num_cols] <- lapply(df[existing_num_cols], function(x) as.numeric(x))
+
+############################################################
+# 2) Create derived columns used in analyses
+############################################################
+
+# rob_count (use total robbing visits)
+if ("Total robbing visits (visits/flower/10 min)" %in% names(df)) {
+  df$rob_count <- df[["Total robbing visits (visits/flower/10 min)"]]
+} else {
+  df$rob_count <- NA_real_
+}
+
+# native_visits = total pollinating minus B. terrestris visits
+if (
+  "Total pollinating visits (visits/flower/10 min)" %in% names(df) &&
+  "Pollinating visits by B. terrestris (visits/flower/10 min)" %in% names(df)
+) {
+  df$native_visits <-
+    df[["Total pollinating visits (visits/flower/10 min)"]] -
+    df[["Pollinating visits by B. terrestris (visits/flower/10 min)"]]
+} else {
+  df$native_visits <- NA_real_
+}
+
+# robbed flag (any rob_count > 0)
+df$robbed_flag <- ifelse(!is.na(df$rob_count) & df$rob_count > 0, "robbed", "unrobbed")
+df$robbed_flag[is.na(df$rob_count)] <- NA
+
+```
+
+Native visitation and robbing
+This section shows how native pollinator visitation differs between robbed and unrobbed flowers, and how visitation varies with robbing intensity.
+
+```{r}
+# Basic boxplot + jitter
+p1 <- ggplot(df, aes(x = robbed_flag, y = native_visits)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.18, alpha = 0.6, size = 1.8) +
+  labs(x = "Robbed status",
+       y = "Native visits (visits/flower/10 min)",
+       title = "Native visits by robbed status") +
+  theme_minimal(base_size = 12)
+
+print(p1)
+
+ggsave(filename = "results/native_visits_by_robbed.png",
+       plot = p1, width = 6, height = 4, dpi = 150)
+
+# Publication-style boxplot
+p_vis_box <- ggplot(df, aes(x = robbed_flag, y = native_visits, fill = robbed_flag)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  geom_jitter(width = 0.15, size = 1.4, alpha = 0.6) +
+  scale_fill_manual(values = c("robbed" = "#d95f02", "unrobbed" = "#1b9e77")) +
+  labs(x = "Robbed status",
+       y = "Native visits (visits/flower/10 min)",
+       title = "Native pollinator visitation and nectar robbing") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+
+print(p_vis_box)
+
+ggsave("results/fig_native_visits_box.png",
+       p_vis_box, width = 6, height = 4, dpi = 300)
+
+# Scatter + smooth: native visitation vs robbing intensity
+p_vis_scatter <- ggplot(df, aes(x = rob_count, y = native_visits, colour = Population)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "glm", family = poisson, se = TRUE, colour = "black") +
+  labs(x = "Robbing visits (per flower / 10 min)",
+       y = "Native visits (per flower / 10 min)",
+       title = "Relationship between robbing and native visitation") +
+  theme_minimal(base_size = 12)
+
+print(p_vis_scatter)
+
+ggsave("results/fig_native_visits_vs_rob.png",
+       p_vis_scatter, width = 6, height = 4, dpi = 300)
+
+############################################################
+# 3) Model: native visits ~ rob_count (Poisson vs NB)
+############################################################
+
+mod_p <- glm(native_visits ~ rob_count + Population,
+             family = poisson(link = "log"), data = df)
+
+disp <- sum(residuals(mod_p, type = "pearson")^2, na.rm = TRUE) / df.residual(mod_p)
+
+if (is.na(disp) || disp > 1.5) {
+  mod_nb <- MASS::glm.nb(native_visits ~ rob_count + Population, data = df)
+} else {
+  # keep mod_p
+}
+
+```
+
+Nectar standing crop and production
+These graphs compare nectar standing crop and production between pierced and undamaged flowers, illustrating how nectar robbing alters nectar availability.
+
+
+```{r}
+############################################################
+# 4) Nectar: pierced vs undamaged (tests + graphs)
+############################################################
+
+p_col <- "Standing crop of nectar from pierced flower (µl/flower)"
+u_col <- "Standing crop of nectar from undamaged flower (µl/flower)"
+
+# Paired tests
+if (all(c(p_col, u_col) %in% names(df))) {
+  paired_ok <- complete.cases(df[[p_col]], df[[u_col]])
+  if (sum(paired_ok) > 3) {
+    dvals <- df[[p_col]][paired_ok] - df[[u_col]][paired_ok]
+    sh <- shapiro.test(dvals)
+    if (sh$p.value > 0.05) {
+      tres <- t.test(df[[p_col]][paired_ok], df[[u_col]][paired_ok], paired = TRUE)
+    } else {
+      wres <- wilcox.test(df[[p_col]][paired_ok], df[[u_col]][paired_ok], paired = TRUE)
+    }
+  }
+}
+
+# Long format for standing crop boxplot
+if (all(c(p_col, u_col) %in% names(df))) {
+  df_nectar_sc <- df %>%
+    dplyr::select(all_of(c("Population", p_col, u_col))) %>%
+    tidyr::pivot_longer(
+      cols = all_of(c(p_col, u_col)),
+      names_to = "Flower_type",
+      values_to = "Standing_crop"
+    ) %>%
+    mutate(
+      Flower_type = ifelse(Flower_type == p_col, "Pierced", "Undamaged")
+    )
+  
+  p_nectar_sc <- ggplot(df_nectar_sc,
+                        aes(x = Flower_type, y = Standing_crop, fill = Flower_type)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+    geom_jitter(width = 0.15, size = 1.4, alpha = 0.5) +
+    scale_fill_manual(values = c("Pierced" = "#e7298a", "Undamaged" = "#7570b3")) +
+    labs(x = "",
+         y = "Standing crop (µl / flower)",
+         title = "Standing crop of nectar: pierced vs undamaged") +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "none")
+  
+  print(p_nectar_sc)
+  
+  ggsave("results/fig_nectar_standing_pierced_vs_undamaged.png",
+         p_nectar_sc, width = 5, height = 4, dpi = 300)
+}
+
+# Production rate plot if columns exist
+p_rate_col <- "Nectar production rate from pierced flower (µl/flower/24 h)"
+u_rate_col <- "Nectar production rate from undamaged flower (µl/flower/24 h)"
+
+if (all(c(p_rate_col, u_rate_col) %in% names(df))) {
+  df_nectar_rate <- df %>%
+    dplyr::select(all_of(c("Population", p_rate_col, u_rate_col))) %>%
+    tidyr::pivot_longer(
+      cols = all_of(c(p_rate_col, u_rate_col)),
+      names_to = "Flower_type",
+      values_to = "Prod_rate"
+    ) %>%
+    mutate(
+      Flower_type = ifelse(Flower_type == p_rate_col, "Pierced", "Undamaged")
+    )
+  
+  p_nectar_rate <- ggplot(df_nectar_rate,
+                          aes(x = Flower_type, y = Prod_rate, fill = Flower_type)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+    geom_jitter(width = 0.15, size = 1.4, alpha = 0.5) +
+    scale_fill_manual(values = c("Pierced" = "#e41a1c", "Undamaged" = "#377eb8")) +
+    labs(x = "",
+         y = "Nectar production (µl / flower / 24 h)",
+         title = "Nectar production: pierced vs undamaged") +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "none")
+  
+  print(p_nectar_rate)
+  
+  ggsave("results/fig_nectar_production_pierced_vs_undamaged.png",
+         p_nectar_rate, width = 5, height = 4, dpi = 300)
+}
+
+```
+Seed set and robbing
+These plots show how seed production per flower changes with robbing intensity and across pollination/robbing treatments.
+
+```{r}
+############################################################
+# 5) Seed set model + graphs
+############################################################
+
+seed_col <- "Seeds/flower (+P+R)"
+
+if (seed_col %in% names(df)) {
+  df$seeds_pr <- df[[seed_col]]
+  
+  # Model seeds ~ rob_count (Poisson or NB)
+  m_seed_p <- glm(seeds_pr ~ rob_count + Population,
+                  family = poisson, data = df)
+  
+  disp_s <- sum(residuals(m_seed_p, type = "pearson")^2, na.rm = TRUE) /
+    m_seed_p$df.residual
+  
+  if (disp_s > 1.5) {
+    mn <- try(MASS::glm.nb(seeds_pr ~ rob_count + Population, data = df),
+              silent = TRUE)
+  }
+  
+  # Scatter + smooth for seeds vs robbing
+  p_seed <- ggplot(df, aes(x = rob_count, y = seeds_pr, colour = Population)) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(method = "glm", family = poisson, se = TRUE, colour = "black") +
+    labs(x = "Robbing visits (per flower / 10 min)",
+         y = "Seeds per flower (+P+R)",
+         title = "Effect of nectar robbing on seed set") +
+    theme_minimal(base_size = 12)
+  
+  print(p_seed)
+  
+  ggsave("results/fig_seeds_vs_rob.png",
+         p_seed, width = 6, height = 4, dpi = 300)
+}
+
+# Multiple seed treatments (pivot and facet)
+seed_cols <- c(
+  "+P+R" = "Seeds/flower (+P+R)",
+  "+P-R" = "Seeds/flower (+P-R)",
+  "-P-R" = "Seeds/flower (-P-R)"
+)
+
+existing_seed_cols <- intersect(seed_cols, names(df))
+
+if (length(existing_seed_cols) > 0) {
+  df_seed_long <- df %>%
+    dplyr::select(all_of(c("Population", "rob_count", existing_seed_cols))) %>%
+    tidyr::pivot_longer(
+      cols = all_of(existing_seed_cols),
+      names_to = "Treatment_full",
+      values_to = "Seeds"
+    ) %>%
+    mutate(
+      Treatment = dplyr::recode(Treatment_full, !!!setNames(names(seed_cols), seed_cols)),
+      Treatment = factor(Treatment, levels = names(seed_cols))
+    )
+  
+  p_seed_treat <- ggplot(df_seed_long,
+                         aes(x = rob_count, y = Seeds, colour = Population)) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(method = "glm", family = poisson, se = FALSE, colour = "black") +
+    facet_wrap(~ Treatment) +
+    labs(x = "Robbing visits (per flower / 10 min)",
+         y = "Seeds per flower",
+         title = "Seed set across pollination/robbing treatments") +
+    theme_minimal(base_size = 11)
+  
+  print(p_seed_treat)
+  
+  ggsave("results/fig_seeds_treatments_vs_rob.png",
+         p_seed_treat, width = 7, height = 4, dpi = 300)
+}
+
+```
+
+
+Population-level patterns
+These final graphs summarise mean robbing intensity and native visitation across populations, highlighting among‑population differences.
+```{r}
+############################################################
+# 6) Population-level summaries and plots
+############################################################
+
+df_pop <- df %>%
+  group_by(Population) %>%
+  summarise(
+    mean_rob = mean(rob_count, na.rm = TRUE),
+    se_rob   = sd(rob_count, na.rm = TRUE) / sqrt(sum(!is.na(rob_count))),
+    mean_native = mean(native_visits, na.rm = TRUE),
+    se_native   = sd(native_visits, na.rm = TRUE) / sqrt(sum(!is.na(native_visits))),
+    .groups = "drop"
+  )
+
+# Population-level robbing intensity
+p_pop_rob <- ggplot(df_pop, aes(x = Population, y = mean_rob)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_rob - se_rob, ymax = mean_rob + se_rob),
+                width = 0.2) +
+  labs(x = "Population",
+       y = "Mean robbing visits (per flower / 10 min)",
+       title = "Robbing intensity across populations") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p_pop_rob)
+
+ggsave("results/fig_pop_rob_intensity.png",
+       p_pop_rob, width = 7, height = 4, dpi = 300)
+
+# Population-level native visitation
+p_pop_native <- ggplot(df_pop, aes(x = Population, y = mean_native)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_native - se_native, ymax = mean_native + se_native),
+                width = 0.2) +
+  labs(x = "Population",
+       y = "Mean native visits (per flower / 10 min)",
+       title = "Native visitation across populations") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p_pop_native)
+
+ggsave("results/fig_pop_native_visitation.png",
+       p_pop_native, width = 7, height = 4, dpi = 300)
+
+
+```
+
+
+
+
