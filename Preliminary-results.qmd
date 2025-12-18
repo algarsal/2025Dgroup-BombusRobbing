@@ -1,37 +1,26 @@
 ---
 title: "Nectar robbing by Bombus terrestris and its ecological effects"
-author: "Vikas Nehra, Rolf, Sina Mesri, Guillum Soler"
+author: "Vikas Nehra, Rolf, Sina Mesri, Guillem Soler"
+number-sections: true
 format: html
 editor: visual
 ---
 
 ## Introduction
 
-Nectar robbing occurs when floral visitors access nectar without contributing
-to pollination. The invasive bumblebee *Bombus terrestris* is known to rob nectar
-from *Fuchsia magellanica* flowers, potentially altering the behavior of native
-pollinators and affecting plant reproductive success.
+Nectar robbing occurs when floral visitors access nectar without contributing to pollination. The invasive bumblebee *Bombus terrestris* is known to rob nectar from *Fuchsia magellanica* flowers, potentially altering the behavior of native pollinators and affecting plant reproductive success.
 
-Previous studies suggest that nectar robbing can modify visitation patterns of
-native flower visitors, but its consequences for seed production remain unclear.
-Understanding these interactions is important for evaluating the ecological
-impact of invasive pollinators.
+Previous studies suggest that nectar robbing can modify visitation patterns of native flower visitors, but its consequences for seed production remain unclear. Understanding these interactions is important for evaluating the ecological impact of invasive pollinators.
 
----
+------------------------------------------------------------------------
 
 ## Objectives and hypotheses
 
-**Objectives**
-- Assess whether nectar robbing changes visitation rates of native pollinators.
-- Evaluate whether nectar robbing affects seed set in *Fuchsia magellanica*.
+**Objectives** - Assess whether nectar robbing changes visitation rates of native pollinators. - Evaluate whether nectar robbing affects seed set in *Fuchsia magellanica*.
 
-**Hypotheses**
-- H1: Higher nectar robbing is associated with reduced native pollinator visits.
-- H2: Nectar robbing does not strongly reduce seed set.
+**Hypotheses** - H1: Higher nectar robbing is associated with reduced native pollinator visits. - H2: Nectar robbing does not strongly reduce seed set.
 
----
-
-
+------------------------------------------------------------------------
 
 ## Methods
 
@@ -54,9 +43,8 @@ if (!dir.exists("results")) dir.create("results")
 
 ```
 
-
-
 # Download data directly
+
 ```{r}
 # Correct URL (NO brackets, NO markdown)
 url <- "https://dfzljdn9uc3pi.cloudfront.net/2025/20253/1/Raw_data.xlsx"
@@ -103,11 +91,7 @@ nrow(df)
 ncol(df)
 ```
 
-
 # Results
-
-
-
 
 ## 1. Native pollinator visits and nectar robbing
 
@@ -122,14 +106,10 @@ title = "Native pollinator visits on robbed vs unrobbed flowers"
 )
 ```
 
-Native pollinator visitation tended to differ between robbed and unrobbed flowers,
-suggesting that nectar robbing may influence flower visitor behavior.
-
-
-
-
+Native pollinator visitation tended to differ between robbed and unrobbed flowers, suggesting that nectar robbing may influence flower visitor behavior.
 
 # 2. Relationship between robbing intensity and native visits
+
 ```{r}
 ggplot(df, aes(
 `Total robbing visits (visits/flower/10 min)`,
@@ -144,11 +124,7 @@ title = "Relationship between nectar robbing and native visitation"
 )
 ```
 
-A negative trend would support the hypothesis that increasing nectar robbing
-reduces native pollinator activity.
-
-
-
+A negative trend would support the hypothesis that increasing nectar robbing reduces native pollinator activity.
 
 # 3. Nectar standing crop: pierced vs undamaged flowers
 
@@ -173,13 +149,10 @@ title = "Nectar standing crop in pierced and undamaged flowers"
 )
 ```
 
-Pierced flowers generally contained less nectar, indicating direct effects of
-nectar robbing on floral resources.
-
-
-
+Pierced flowers generally contained less nectar, indicating direct effects of nectar robbing on floral resources.
 
 # 4. Seed set and nectar robbing
+
 ```{r}
 ggplot(df, aes(robbed_status, `Seeds/flower (+P+R)`)) +
 geom_boxplot(fill = "lightgreen") +
@@ -190,26 +163,19 @@ y = "Seeds per flower",
 title = "Seed set in robbed vs unrobbed flowers"
 )
 ```
+
 Seed production appeared broadly similar between robbed and unrobbed flowers.
 
-
-
 #5. ANOVA: effect of robbing on seed set
+
 ```{r}
 anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df)
 summary(anova_seed)
 ```
 
-
-
 ## Discussion
 
-Nectar robbing by Bombus terrestris was associated with changes in native
-pollinator visitation patterns, supporting the hypothesis that robbing modifies
-flower visitor behavior. However, seed set showed limited sensitivity to robbing,
-suggesting compensatory mechanisms in plant reproduction.
-
-
+Nectar robbing by Bombus terrestris was associated with changes in native pollinator visitation patterns, supporting the hypothesis that robbing modifies flower visitor behavior. However, seed set showed limited sensitivity to robbing, suggesting compensatory mechanisms in plant reproduction.
 
 ## Conclusions
 
@@ -218,4 +184,3 @@ Nectar robbing is associated with changes in native pollinator visitation.
 Seed production does not appear to be strongly reduced by robbing.
 
 These results support the idea that behavioral effects may occur without immediate reproductive consequences.
-
