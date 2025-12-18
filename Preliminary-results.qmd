@@ -1,3 +1,7 @@
+```{r}
+
+```
+
 ---
 title: "Nectar robbing by Bombus terrestris and its ecological effects"
 author: "Vikas Nehra, Rolf, Sina Mesri, Guillem Soler"
@@ -16,9 +20,13 @@ To address these questions, the study quantifies nectar production and standing 
 
 ## Objectives
 
--   Assess whether nectar robbing by Bombus terrestris changes the visitation rates and behavioral patterns of native pollinators visiting Fuchsia magellanica.
+-   The project is structured around three main objectives:
 
--   Evaluate whether nectar robbing affects female reproductive success, measured as seed set, in Fuchsia magellanica.
+    -   To quantify the effect of nectar robbing by Bombus terrestris on nectar production and standing nectar crop in flowers of Fuchsia magellanica.
+
+    -   To determine how nectar robbing alters the visitation rates and behavioral patterns of native flower visitors, particularly the main hummingbird pollinator.
+
+    -   To evaluate whether changes in nectar availability and visitor behavior associated with nectar robbing lead to differences in female reproductive success, measured as seed set.
 
 ## Hypotheses
 
@@ -170,11 +178,117 @@ title = "Seed set in robbed vs unrobbed flowers"
 
 Seed production appeared broadly similar between robbed and unrobbed flowers.
 
-#5. ANOVA: effect of robbing on seed set
+## ANOVA
+
+In this section we evaluate whether seed set differs between robbed and unrobbed flowers of *Fuchsia magellanica* using an analysis of variance (ANOVA). We then apply a Tukey post hoc test and summarize significant differences with letters in a boxplot.
+
+PRESeNCIA DE SEMILLAS O NO
+
+(CHI CUADRADO)
+
+SI QUITAMOS LOS CEROS TENEMOS LOS VALORES CON SEMILLAS COMO CAMBIA EL NUMWRO DE SEMILLAS EN BASE AL ROBBED UNROBBED
+
+MIRAR SI LA POISSON DISTRIBUTION TIENE MAS SENTIDO PARA CONTEO EN ESTE CAOS PORQW LA DISTRIBUCIÓN LO PARECE –\> en vez de usar AOV usamos glm al finalc hay q poner family=poisson
+
+\# ANOVA: effect of robbing on seed set
 
 ```{r}
 anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df)
 summary(anova_seed)
+```
+
+\# Turkey post hoc and significance letters for robbing levels
+
+```{r}
+# Turkey post hoc and significance letters for robbing levels
+library(multcompView)
+
+tukey_seed <- TukeyHSD(anova_seed)
+
+# Extract adjusted p-values for robbed_status
+tukey_res <- tukey_seed$robbed_status[ , "p adj"]
+names(tukey_res) <- rownames(tukey_seed$robbed_status)
+
+# Get compact letter display
+letters_seed <- multcompLetters(tukey_res)$Letters
+
+letters_df <- data.frame(
+  robbed_status = names(letters_seed),
+  Letters = letters_seed,
+  row.names = NULL
+)
+
+# Summary table for plotting
+seed_summary <- df %>%
+  dplyr::group_by(robbed_status) %>%
+  dplyr::summarise(
+    Mean = mean(`Seeds/flower (+P+R)`, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  dplyr::left_join(letters_df, by = "robbed_status") %>%
+  dplyr::mutate(
+    robbed_status = factor(robbed_status,
+                           levels = levels(df$robbed_status))
+  )
+
+# Maximum seed value for positioning letters
+max_seed <- max(df$`Seeds/flower (+P+R)`, na.rm = TRUE)
+
+```
+
+```{r}
+# Filter out NA in robbed_status
+df_seed <- df %>%
+  dplyr::filter(!is.na(robbed_status))
+
+# Refit ANOVA on filtered data
+anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df_seed)
+summary(anova_seed)
+
+# Tukey + letters with filtered data
+tukey_seed  <- TukeyHSD(anova_seed)
+tukey_res   <- tukey_seed$robbed_status[, "p adj"]
+names(tukey_res) <- rownames(tukey_seed$robbed_status)
+
+letters_seed <- multcompView::multcompLetters(tukey_res)$Letters
+letters_df   <- data.frame(
+  robbed_status = names(letters_seed),
+  Letters       = letters_seed,
+  row.names     = NULL
+)
+
+seed_summary <- df_seed %>%
+  dplyr::group_by(robbed_status) %>%
+  dplyr::summarise(
+    Mean = mean(`Seeds/flower (+P+R)`, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  dplyr::left_join(letters_df, by = "robbed_status")
+
+max_seed <- max(df_seed$`Seeds/flower (+P+R)`, na.rm = TRUE)
+
+#| fig-cap: Seed set (seeds per flower) in robbed and unrobbed flowers of *Fuchsia magellanica*. Different letters (in red) indicate significant differences between robbing categories according to Tukey post hoc ANOVA (alpha = 0.05).
+
+ggplot(df_seed, aes(x = robbed_status,
+                    y = `Seeds/flower (+P+R)`,
+                    fill = robbed_status)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.15, alpha = 0.5) +
+  geom_text(data = seed_summary,
+            aes(x = robbed_status,
+                y = max_seed * 1.05,
+                label = Letters),
+            color = "red",
+            size = 5,
+            vjust = 0) +
+  labs(
+    x = "Flower status",
+    y = "Seeds per flower"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
 ```
 
 ## Discussion
