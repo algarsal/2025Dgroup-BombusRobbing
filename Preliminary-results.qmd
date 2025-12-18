@@ -1,7 +1,3 @@
-```{r}
-
-```
-
 ---
 title: "Nectar robbing by Bombus terrestris and its ecological effects"
 author:
@@ -15,7 +11,7 @@ number-sections: true
 format: html
 ---
 
-## Introduction
+# Introduction
 
 Nectar robbing occurs when floral visitors access nectar without effectively contributing to pollination, typically by bypassing contact with the reproductive structures of the flower. In invaded communities, Bombus terrestris has emerged as a particularly important nectar robber, frequently piercing the corollas of Fuchsia magellanica to extract nectar while providing little or no pollination service. This behavior can reduce nectar availability in individual flowers and potentially modify the foraging decisions of native pollinators, such as hummingbirds, which rely on nectar as a primary energy source.
 
@@ -60,7 +56,7 @@ if (!dir.exists("results")) dir.create("results")
 
 ```
 
-# Download data directly
+Download data directly
 
 ```{r}
 # Correct URL (NO brackets, NO markdown)
@@ -110,7 +106,7 @@ ncol(df)
 
 # Results
 
-## 1. Native pollinator visits and nectar robbing
+## Native pollinator visits and nectar robbing
 
 ```{r}
 ggplot(df, aes(robbed_status, native_visits)) +
@@ -125,7 +121,7 @@ title = "Native pollinator visits on robbed vs unrobbed flowers"
 
 Native pollinator visitation tended to differ between robbed and unrobbed flowers, suggesting that nectar robbing may influence flower visitor behavior.
 
-# 2. Relationship between robbing intensity and native visits
+## Relationship between robbing intensity and native visits
 
 ```{r}
 ggplot(df, aes(
@@ -143,7 +139,7 @@ title = "Relationship between nectar robbing and native visitation"
 
 A negative trend would support the hypothesis that increasing nectar robbing reduces native pollinator activity.
 
-# 3. Nectar standing crop: pierced vs undamaged flowers
+## Nectar standing crop: pierced vs undamaged flowers
 
 ```{r}
 nectar_long <- df %>%
@@ -168,7 +164,7 @@ title = "Nectar standing crop in pierced and undamaged flowers"
 
 Pierced flowers generally contained less nectar, indicating direct effects of nectar robbing on floral resources.
 
-# 4. Seed set and nectar robbing
+## Seed set and nectar robbing
 
 ```{r}
 ggplot(df, aes(robbed_status, `Seeds/flower (+P+R)`)) +
@@ -195,14 +191,14 @@ SI QUITAMOS LOS CEROS TENEMOS LOS VALORES CON SEMILLAS COMO CAMBIA EL NUMWRO DE 
 
 MIRAR SI LA POISSON DISTRIBUTION TIENE MAS SENTIDO PARA CONTEO EN ESTE CAOS PORQW LA DISTRIBUCIÓN LO PARECE –\> en vez de usar AOV usamos glm al finalc hay q poner family=poisson
 
-\# ANOVA: effect of robbing on seed set
+# ANOVA: effect of robbing on seed set
 
 ```{r}
 anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df)
 summary(anova_seed)
 ```
 
-\# Turkey post hoc and significance letters for robbing levels
+# Turkey post hoc and significance letters for robbing levels
 
 ```{r}
 # Turkey post hoc and significance letters for robbing levels
@@ -296,11 +292,11 @@ ggplot(df_seed, aes(x = robbed_status,
 
 ```
 
-## Discussion
+# Discussion
 
 Nectar robbing by Bombus terrestris was associated with changes in native pollinator visitation patterns, supporting the hypothesis that robbing modifies flower visitor behavior. However, seed set showed limited sensitivity to robbing, suggesting compensatory mechanisms in plant reproduction.
 
-## Conclusions
+# Conclusions
 
 Nectar robbing is associated with changes in native pollinator visitation.
 
