@@ -4,10 +4,15 @@
 
 ---
 title: "Nectar robbing by Bombus terrestris and its ecological effects"
-author: "Vikas Nehra, Rolf, Sina Mesri, Guillem Soler"
+author:
+- name: Guillem Soler, Rolf Siebert, Vikas Nehra, Sina Mesri
+  affiliation: Universitat Politècnica de València.
+title-block-banner: true
+date: last-modified
+date-format: iso
+lang: en-US
 number-sections: true
 format: html
-editor: visual
 ---
 
 ## Introduction
