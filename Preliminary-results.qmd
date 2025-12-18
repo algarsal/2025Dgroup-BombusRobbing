@@ -1,6 +1,7 @@
 ---
 title: "Nectar robbing by Bombus terrestris and its ecological effects"
 author: "Vikas Nehra, Rolf, Sina Mesri, Guillum Soler"
+number-sections: true
 format: html
 editor: visual
 ---
@@ -194,9 +195,9 @@ Seed production appeared broadly similar between robbed and unrobbed flowers.
 
 
 
-#5. ANOVA: effect of robbing on seed set
-```{r}
-anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df)
+# 5.ANOVA: effect of robbing on seed set
+```{r-fig}
+fig-anova_seed <- aov(`Seeds/flower (+P+R)` ~ robbed_status, data = df)
 summary(anova_seed)
 ```
 
