@@ -8,19 +8,23 @@ editor: visual
 
 ## Introduction
 
-Nectar robbing occurs when floral visitors access nectar without contributing to pollination. The invasive bumblebee *Bombus terrestris* is known to rob nectar from *Fuchsia magellanica* flowers, potentially altering the behavior of native pollinators and affecting plant reproductive success.
+Nectar robbing occurs when floral visitors access nectar without effectively contributing to pollination, typically by bypassing contact with the reproductive structures of the flower. In invaded communities, Bombus terrestris has emerged as a particularly important nectar robber, frequently piercing the corollas of Fuchsia magellanica to extract nectar while providing little or no pollination service. This behavior can reduce nectar availability in individual flowers and potentially modify the foraging decisions of native pollinators, such as hummingbirds, which rely on nectar as a primary energy source.
 
-Previous studies suggest that nectar robbing can modify visitation patterns of native flower visitors, but its consequences for seed production remain unclear. Understanding these interactions is important for evaluating the ecological impact of invasive pollinators.
+Biological invasions are increasingly recognized as a major driver of change in mutualistic networks, where plants and pollinators are linked through reciprocal dependence on rewards and pollination. The introduction of B. terrestris adds a novel interaction mode—systematic nectar robbing—that may weaken the quantity or quality of pollination that native plants receive, even when flowers continue to be visited. Within this context, Fuchsia magellanica, a nectar‑rich, hummingbird‑pollinated shrub, provides an ideal model system to examine how invasive nectar robbers can restructure plant–pollinator interactions. The central questions are whether nectar robbing by B. terrestris depletes floral nectar sufficiently to alter the visitation patterns of native hummingbirds and other visitors, and whether any such changes ultimately reduce seed set.
 
-------------------------------------------------------------------------
+To address these questions, the study quantifies nectar production and standing nectar crop in robbed and unrobbed flowers, characterizes shifts in the frequency and type of visits by native pollinators and other floral visitors, and estimates female reproductive success through seed production. By jointly considering behavioral responses and reproductive outcomes, the project offers a nuanced view of invasion impacts that goes beyond simple presence–absence effects. It highlights that invasive species may substantially modify the structure and function of native mutualisms at the behavioral level while producing more subtle or context‑dependent consequences for plant fitness, thereby providing a framework to assess how novel interaction modes, such as nectar robbing, can uncouple short‑term disruption of mutualisms from longer‑term demographic effects on native plants.
 
-## Objectives and hypotheses
+## Objectives
 
-**Objectives** - Assess whether nectar robbing changes visitation rates of native pollinators. - Evaluate whether nectar robbing affects seed set in *Fuchsia magellanica*.
+-   Assess whether nectar robbing by Bombus terrestris changes the visitation rates and behavioral patterns of native pollinators visiting Fuchsia magellanica.
 
-**Hypotheses** - H1: Higher nectar robbing is associated with reduced native pollinator visits. - H2: Nectar robbing does not strongly reduce seed set.
+-   Evaluate whether nectar robbing affects female reproductive success, measured as seed set, in Fuchsia magellanica.
 
-------------------------------------------------------------------------
+## Hypotheses
+
+-   H1: Higher levels of nectar robbing are associated with reduced visitation rates and/or altered visitation behavior by native pollinators, particularly hummingbirds.
+
+-   H2: Despite changes in visitation patterns, nectar robbing does not strongly reduce seed set in Fuchsia magellanica, indicating a partial decoupling between behavioral disruption and reproductive output.
 
 ## Methods
 
