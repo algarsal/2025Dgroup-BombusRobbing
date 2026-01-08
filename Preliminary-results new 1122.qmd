@@ -1,0 +1,286 @@
+---
+title: "Nectar robbing by Bombus terrestris and its effects on pollination"
+author: "Vikas Nehra, 
+         Rolf Siebert, 
+         Sina Mesri, 
+         Guillem Soler"
+number-sections: true
+affiliation: Universitat Politècnica de València
+bibilography: biblio/biblio.bib
+eco: false
+code-fold: true
+format: 
+  html:
+    embed-resources: true
+    self-contained-math: true
+---
+
+## Introduction
+
+Nectar robbing occurs when floral visitors access nectar without effectively contributing to pollination, typically by bypassing contact with the reproductive structures of the flower. In invaded communities, Bombus terrestris has emerged as a particularly important nectar robber, frequently piercing the corollas of Fuchsia magellanica to extract nectar while providing little or no pollination service. This behavior can reduce nectar availability in individual flowers and potentially modify the foraging decisions of native pollinators, such as hummingbirds, which rely on nectar as a primary energy source.
+
+Biological invasions are increasingly recognized as a major driver of change in mutualistic networks, where plants and pollinators are linked through reciprocal dependence on rewards and pollination. The introduction of B. terrestris adds a novel interaction mode—systematic nectar robbing—that may weaken the quantity or quality of pollination that native plants receive, even when flowers continue to be visited. Within this context, Fuchsia magellanica, a nectar‑rich, hummingbird‑pollinated shrub, provides an ideal model system to examine how invasive nectar robbers can restructure plant–pollinator interactions. The central questions are whether nectar robbing by B. terrestris depletes floral nectar sufficiently to alter the visitation patterns of native hummingbirds and other visitors, and whether any such changes ultimately reduce seed set.
+
+To address these questions, the study quantifies nectar production and standing nectar crop in robbed and unrobbed flowers, characterizes shifts in the frequency and type of visits by native pollinators and other floral visitors, and estimates female reproductive success through seed production. By jointly considering behavioral responses and reproductive outcomes, the project offers a nuanced view of invasion impacts that goes beyond simple presence–absence effects. It highlights that invasive species may substantially modify the structure and function of native mutualisms at the behavioral level while producing more subtle or context‑dependent consequences for plant fitness, thereby providing a framework to assess how novel interaction modes, such as nectar robbing, can uncouple short‑term disruption of mutualisms from longer‑term demographic effects on native plants.
+
+## Objectives
+
+-   Assess whether nectar robbing by Bombus terrestris changes the visitation rates and behavioral patterns of native pollinators visiting Fuchsia magellanica.
+
+-   Evaluate whether nectar robbing affects female reproductive success, measured as seed set, in Fuchsia magellanica.
+
+## Hypotheses
+
+-   H1: Higher levels of nectar robbing are associated with reduced visitation rates and/or altered visitation behavior by native pollinators, particularly hummingbirds.
+
+-   H2: Despite changes in visitation patterns, nectar robbing does not strongly reduce seed set in Fuchsia magellanica, indicating a partial decoupling between behavioral disruption and reproductive output.
+
+## Methods
+
+```{r , include=FALSE}
+# Global setup
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.path = "results/"
+)
+
+# Load required packages
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# Create results folder if missing
+if (!dir.exists("results")) dir.create("results")
+
+```
+
+# Download data to temporary file
+
+```{r}
+# Download data (plain URL, not markdown)
+url <- "https://dfzljdn9uc3pi.cloudfront.net/2025/20253/1/Raw_data.xlsx"
+tmp <- tempfile(fileext = ".xlsx")
+
+download.file(url, tmp, mode = "wb")
+
+df <- readxl::read_excel(tmp, sheet = 1)
+
+# Replace 'nr' with NA
+df[df == "nr"] <- NA
+
+```
+
+# 3. Data preparation
+
+```{r}
+# Convert relevant columns to numeric
+
+num_cols <- c(
+"Total pollinating visits (visits/flower/10 min)",
+"Pollinating visits by B. terrestris (visits/flower/10 min)",
+"Total robbing visits (visits/flower/10 min)",
+"Standing crop of nectar from pierced flower (µl/flower)",
+"Standing crop of nectar from undamaged flower (µl/flower)",
+"Seeds/flower (+P+R)"
+)
+
+df[num_cols] <- lapply(df[num_cols], as.numeric)
+
+```
+
+```{r}
+# Derived variables
+
+df <- df %>%
+mutate(
+native_visits =
+`Total pollinating visits (visits/flower/10 min)` -
+`Pollinating visits by B. terrestris (visits/flower/10 min)`,
+robbed_flag = ifelse(
+  !is.na(`Total robbing visits (visits/flower/10 min)`) &
+  `Total robbing visits (visits/flower/10 min)` > 0,
+  "robbed", "unrobbed"
+),
+
+visited_flag = ifelse(
+  native_visits > 0, "visited", "not_visited"
+)
+)
+```
+
+# 4. Exploratory figures
+## Native visits by robbing status
+
+```{r}
+ggplot(df, aes(robbed_flag, native_visits)) +
+geom_boxplot() +
+geom_jitter(width = 0.2, alpha = 0.5) +
+labs(
+x = "Robbing status",
+y = "Native pollinator visits",
+title = "Native pollinator visitation under robbed and unrobbed flowers"
+)
+
+```
+
+### 2 — Frequency of zero vs non-zero visits
+```{r}
+ggplot(df, aes(visited_flag, fill = robbed_flag)) +
+geom_bar(position = "dodge") +
+labs(
+x = "Native pollinator visitation",
+y = "Number of observations",
+fill = "Robbing status",
+title = "Occurrence of native pollinator visits"
+)
+
+```
+
+# 5. Chi-square: visited vs not visited
+```{r}
+visit_table <- table(df$visited_flag, df$robbed_flag)
+visit_table
+
+chisq.test(visit_table)
+
+```
+
+# 6. Poisson model — native visitation intensity (zeros excluded)
+```{r}
+df_vis <- df %>%
+filter(!is.na(native_visits), native_visits > 0)
+
+mod_vis_pois <- glm(
+native_visits ~ `Total robbing visits (visits/flower/10 min)` + Population,
+family = poisson,
+data = df_vis
+)
+
+# Check dispersion
+
+disp <- sum(residuals(mod_vis_pois, type = "pearson")^2) /
+mod_vis_pois$df.residual
+
+disp
+
+```
+
+```{r}
+if (disp > 1.5) {
+mod_vis_nb <- glm.nb(
+native_visits ~ `Total robbing visits (visits/flower/10 min)` + Population,
+data = df_vis
+)
+summary(mod_vis_nb)
+} else {
+summary(mod_vis_pois)
+}
+
+```
+
+# 7. Nectar comparison — Poisson model
+```{r}
+nectar_long <- df %>%
+  tidyr::pivot_longer(
+    cols = c(
+      `Standing crop of nectar from pierced flower (µl/flower)`,
+      `Standing crop of nectar from undamaged flower (µl/flower)`
+    ),
+    names_to = "type",
+    values_to = "nectar"
+  ) %>%
+  dplyr::filter(!is.na(nectar))
+
+
+
+
+```
+
+```{r}
+mod_nectar <- glm(nectar ~ type, family = poisson, data = nectar_long)
+
+disp_n <- sum(residuals(mod_nectar, type = "pearson")^2) /
+mod_nectar$df.residual
+
+disp_n
+
+```
+```{r}
+library(MASS)
+if (disp_n > 1.5) {
+summary(glm.nb(nectar ~ type, data = nectar))
+} else {
+summary(mod_nectar)
+}
+
+```
+
+### Figure 3 — Nectar standing crop
+```{r}
+ggplot(nectar_long, aes(type, nectar, fill = type)) +
+geom_boxplot() +
+labs(
+x = "Flower condition",
+y = "Nectar volume (µl)",
+title = "Nectar standing crop in pierced vs undamaged flowers"
+)
+
+```
+
+# 8. Seed set — Poisson model
+```{r}
+seed <- df %>%
+dplyr::select(`Seeds/flower (+P+R)`,
+`Total robbing visits (visits/flower/10 min)`,
+Population
+) %>%
+filter(!is.na(`Seeds/flower (+P+R)`))
+
+```
+
+```{r}
+mod_seed <- glm(df$`Seeds/flower (+P+R)`  ~ df$`Total pollinating visits (visits/flower/10 min)` + Population, family = poisson, data = seed)
+
+disp_s <- sum(residuals(mod_seed, type = "pearson")^2) /
+mod_seed$df.residual
+
+disp_s
+
+```
+
+```{r}
+if (disp_s > 1.5) {
+summary(glm.nb(seeds ~ robbing + Population, data = seed))
+} else {
+summary(mod_seed)
+}
+
+```
+
+# Figure 4 — Seed set vs robbing
+```{r}
+ggplot(seed, aes(robbing, seeds)) +
+geom_point(alpha = 0.5) +
+geom_smooth(method = "glm", method.args = list(family = "poisson")) +
+labs(
+x = "Robbing visits",
+y = "Seeds per flower",
+title = "Relationship between nectar robbing and seed production"
+)
+
+```
+
+
+## Discussion
+
+Nectar robbing by Bombus terrestris was associated with changes in native pollinator visitation patterns, supporting the hypothesis that robbing modifies flower visitor behavior. However, seed set showed limited sensitivity to robbing, suggesting compensatory mechanisms in plant reproduction.
+
+## Conclusions
+
+Nectar robbing is associated with changes in native pollinator visitation.
+
+Seed production does not appear to be strongly reduced by robbing.
+
+These results support the idea that behavioral effects may occur without immediate reproductive consequences.

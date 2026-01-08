@@ -1,0 +1,190 @@
+---
+title: "Nectar robbing by *Bombus terrestris* and its effects on pollination"
+author: "Vikas Nehra; Sina Mesri; Guillem Soler; Rolf Siebert"
+affiliation: "Universitat Politècnica de València"
+title-block-banner: true
+date: last-modified
+date-format: iso
+lang: en-US
+language:
+  title-block-published: "Last modified"        
+format: html
+execute:
+  echo: true
+  warning: false
+  message: false
+embed-resources: true
+self-contained-math: true
+---
+
+<div style="text-align:center; margin-bottom:20px;">
+  <img src="https://www.upv.es/perfiles/pas-pdi/imagenes/marca_UPV_principal_blanco300.png"
+       width="180">
+</div>
+
+## Introduction
+
+Nectar robbing by non-native pollinators can alter plant–pollinator interactions by reducing floral rewards and modifying visitation patterns of native pollinators. *Bombus terrestris* is a well-known nectar robber in South American ecosystems, yet its effects on native visitor behavior and plant reproductive success remain context dependent. Understanding whether nectar robbing reduces visitation frequency and seed set is essential to evaluate its ecological impact.
+
+## Objectives and hypotheses
+
+### Objective 1:
+Assess whether nectar robbing alters visitation by native pollinators.
+
+### Objective 2:
+Evaluate whether nectar robbing affects seed production.
+
+### Hypotheses:
+
+- **H1**: Flowers experiencing nectar robbing receive fewer native visits.
+- **H2**: Nectar robbing negatively affects seed set.
+
+## Methods
+
+### Data origin
+
+We used publicly available data from a PeerJ study on nectar robbing by *Bombus terrestris*. The dataset contains flower-level observations across populations, including visitation rates, nectar traits, and seed production.
+
+# 1. Packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(MASS)
+library(knitr)
+```
+
+
+
+# 2. Data import 
+
+```{r}
+url <- "https://dfzljdn9uc3pi.cloudfront.net/2025/20253/1/Raw_data.xlsx"
+tmp <- tempfile(fileext = ".xlsx")
+
+tryCatch(
+download.file(url, tmp, mode = "wb"),
+error = function(e) stop("Data download failed. Check internet connection.")
+)
+
+df <- read_excel(tmp)
+```
+
+
+
+# 3. Data preparation
+
+```{r}
+df <- df %>%
+  mutate(
+    rob_count = as.numeric(`Total robbing visits (visits/flower/10 min)`),
+    native_visits =
+      as.numeric(`Total pollinating visits (visits/flower/10 min)`) -
+      as.numeric(`Pollinating visits by B. terrestris (visits/flower/10 min)`),
+    Population = factor(Population),
+    robbed = ifelse(rob_count > 0, "Robbed", "Unrobbed"),
+    visited = ifelse(native_visits > 0, "Visited", "Not visited")
+  ) %>%
+  filter(!is.na(native_visits), !is.na(rob_count))
+
+```
+
+
+# 4. Zero structure 
+
+```{r}
+zero_table <- df %>%
+group_by(robbed) %>%
+summarise(
+flowers = n(),
+zero_visits = sum(native_visits == 0),
+proportion_zero = zero_visits / flowers
+)
+
+kable(zero_table, digits = 2,
+caption = "Zero inflation of native visits by nectar robbing status")
+```
+
+
+
+# 5. Was the flower visited or not?
+
+```{r}
+df %>%
+count(robbed, visited) %>%
+group_by(robbed) %>%
+mutate(prop = n / sum(n)) %>%
+ggplot(aes(visited, prop, fill = robbed)) +
+geom_col(position = "dodge") +
+labs(
+x = "Visitation status",
+y = "Proportion of flowers",
+title = "Effect of nectar robbing on visitation probability"
+) +
+theme_minimal()
+```
+
+# 6. Intensity of visits 
+
+```{r}
+df %>%
+filter(native_visits > 0) %>%
+ggplot(aes(native_visits, fill = robbed)) +
+geom_histogram(binwidth = 1, position = "dodge") +
+labs(
+x = "Native visits per flower",
+y = "Number of flowers",
+title = "Intensity of native visits (visited flowers only)"
+) +
+theme_minimal()
+```
+
+
+
+
+# 7. Count model
+
+```{r}
+mod_pois <- glm(
+native_visits ~ rob_count + Population,
+family = poisson,
+data = df
+)
+
+summary(mod_pois)
+```
+
+
+
+# 8. Model-based prediction 
+
+```{r}
+newdat <- data.frame(
+rob_count = seq(0, max(df$rob_count), length.out = 100),
+Population = levels(df$Population)[1]
+)
+
+newdat$pred <- predict(mod_pois, newdat, type = "response")
+
+ggplot(df, aes(rob_count, native_visits)) +
+geom_jitter(alpha = 0.4, width = 0.1) +
+geom_line(data = newdat, aes(rob_count, pred),
+linewidth = 1, color = "red") +
+labs(
+x = "Robbing visits",
+y = "Native visits",
+title = "Negative relationship between nectar robbing and native visitation"
+) +
+theme_minimal()
+
+```
+
+
+## Discussion
+
+Our results indicate that nectar robbing is associated with a higher proportion of flowers receiving no native visits and a reduced intensity of visitation when visits occur. The Poisson model supports a negative relationship between robbing frequency and native visitation, consistent with the hypothesis that nectar depletion discourages native pollinators.
+
+## Conclusions
+
+Nectar robbing by *Bombus terrestris* alters pollination dynamics by reducing both the probability and intensity of native pollinator visits. These effects may have cascading consequences for plant reproductive success and the stability of pollination networks.
