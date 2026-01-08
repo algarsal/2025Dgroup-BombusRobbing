@@ -7,3 +7,5 @@
 *.xlsx
 *.pdf
 !data/bumbledata.xlsx
+*.png
+*files
