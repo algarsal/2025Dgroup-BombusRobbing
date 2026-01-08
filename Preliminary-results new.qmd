@@ -1,10 +1,10 @@
-<div style="text-align:top; margin-bottom:30px;">
+<div style="text-align:top; margin-bottom:80px;">
   <img src="figures/marca_UPV_principal_color300.png"
-       width="180">
+       width="220">
 </div>
 ---
 title: "Nectar robbing by *Bombus terrestris* and its effects on pollination"
-author: "Vikas Nehra; Sina Mesri; Guillem Soler; Rolf Siebert"
+author: "Vikas Nehra, Sina Mesri, Guillem Soler, Rolf Siebert"
 affiliation: "Universitat Politècnica de València"
 title-block-banner: true
 date: last-modified
